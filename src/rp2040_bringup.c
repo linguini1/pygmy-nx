@@ -35,12 +35,17 @@
 
 #include "rp2040_pico.h"
 
-#ifdef CONFIG_ARCH_BOARD_COMMON
-#include "rp2040_common_bringup.h"
-#endif /* CONFIG_ARCH_BOARD_COMMON */
+#if defined(CONFIG_ADC) && defined(CONFIG_RP2040_ADC)
+#include "rp2040_adc.h"
+#endif
 
-#ifdef CONFIG_USERLED
-#  include <nuttx/leds/userled.h>
+#ifdef CONFIG_WATCHDOG
+#  include "rp2040_wdt.h"
+#endif
+
+#ifdef CONFIG_SENSORS_MS56XX
+#include <nuttx/sensors/ms56xx.h>
+#include "rp2040_i2c.h"
 #endif
 
 /****************************************************************************
@@ -53,36 +58,154 @@
 
 int rp2040_bringup(void)
 {
-#ifdef CONFIG_ARCH_BOARD_COMMON
 
-  int ret = rp2040_common_bringup();
+    int ret;
+
+    /* Chip bring-up (doing it our own way, not calling rp2040_common_bringup) */
+
+    /* I2C interfaces */
+
+#ifdef CONFIG_RP2040_I2C_DRIVER
+  #ifdef CONFIG_RP2040_I2C0
+  ret = board_i2cdev_initialize(0);
   if (ret < 0)
     {
-      return ret;
+      syslog(LOG_ERR, "Failed to initialize I2C0.\n");
+    }
+  #endif
+
+  #ifdef CONFIG_RP2040_I2C1
+  ret = board_i2cdev_initialize(1);
+  if (ret < 0)
+    {
+      syslog(LOG_ERR, "Failed to initialize I2C1.\n");
+    }
+  #endif
+#endif
+
+/* SPI interfaces */
+
+#ifdef CONFIG_RP2040_SPI_DRIVER
+  #ifdef CONFIG_RP2040_SPI0
+  ret = board_spidev_initialize(0);
+  if (ret < 0)
+    {
+      syslog(LOG_ERR, "Failed to initialize SPI0.\n");
+    }
+  #endif
+
+  #ifdef CONFIG_RP2040_SPI1
+  ret = board_spidev_initialize(1);
+  if (ret < 0)
+    {
+      syslog(LOG_ERR, "Failed to initialize SPI1.\n");
+    }
+  #endif
+#endif
+
+  /* Initialize ADC */
+
+#if defined(CONFIG_ADC) && defined(CONFIG_RP2040_ADC)
+
+#  ifdef CONFIG_RPC2040_ADC_CHANNEL0
+#    define ADC_0 true
+#  else
+#    define ADC_0 false
+#  endif
+
+#  ifdef CONFIG_RPC2040_ADC_CHANNEL1
+#    define ADC_1 true
+#  else
+#    define ADC_1 false
+#  endif
+
+#  ifdef CONFIG_RPC2040_ADC_CHANNEL2
+#    define ADC_2 true
+#  else
+#    define ADC_2 false
+#  endif
+
+#  ifdef CONFIG_RPC2040_ADC_CHANNEL3
+#    define ADC_3 true
+#  else
+#    define ADC_3 false
+#  endif
+
+#  ifdef CONFIG_RPC2040_ADC_TEMPERATURE
+#    define ADC_TEMP true
+#  else
+#    define ADC_TEMP false
+#  endif
+
+  ret = rp2040_adc_setup("/dev/adc0", ADC_0, ADC_1, ADC_2, ADC_3, ADC_TEMP);
+  if (ret != OK)
+    {
+      syslog(LOG_ERR, "Failed to initialize ADC Driver: %d\n", ret);
     }
 
-#endif /* CONFIG_ARCH_BOARD_COMMON */
+#endif /* defined(CONFIG_ADC) && defined(CONFIG_RP2040_ADC) */
 
-  /* --- Place any board specific bringup code here --- */
 
-#ifdef CONFIG_USERLED
-  /* Register the LED driver */
+#ifdef CONFIG_WATCHDOG
+  /* Configure watchdog timer */
 
-  ret = userled_lower_initialize("/dev/userleds");
+  ret = rp2040_wdt_init();
   if (ret < 0)
     {
-      syslog(LOG_ERR, \
-      "ERROR: userled_lower_initialize() failed: %d\n", ret);
+      syslog(LOG_ERR,
+             "ERROR: Failed to initialize watchdog drivers: %d\n",
+             ret);
     }
 #endif
 
-#ifdef CONFIG_INPUT_BUTTONS
-  /* Register the BUTTON driver */
+/* Procfs file system */
 
-  ret = btn_lower_initialize("/dev/buttons");
+#ifdef CONFIG_FS_PROCFS
+  /* Mount the procfs file system */
+
+  ret = nx_mount(NULL, "/proc", "procfs", 0, NULL);
   if (ret < 0)
     {
-      syslog(LOG_ERR, "ERROR: btn_lower_initialize() failed: %d\n", ret);
+      serr("ERROR: Failed to mount procfs at %s: %d\n", "/proc", ret);
+    }
+#endif
+
+
+    // TODO copy from rp2040_common_bringup code for items that I actually want
+    
+    /* Peripherals
+     * TODO EEPROM
+     * TODO LSM6DSO32
+     * TODO LIS2MDL
+     * TODO GPS
+     * TODO RN2903
+     * TODO ADC for battery charge
+     * TODO SD card file system
+     */
+
+    /* Barometric pressure sensor at 0x77 */
+
+#ifdef CONFIG_SENSORS_MS56XX
+  /* Try to register MS56xx device at I2C0 */
+
+  ret = ms56xx_register(rp2040_i2cbus_initialize(0), 0, MS56XX_ADDR0,
+                        MS56XX_MODEL_MS5611);
+  if (ret < 0)
+    {
+        syslog(LOG_ERR, "Couldn't register MS5611 at %u: %d\n", MS56XX_ADDR0, ret);
+    }
+#endif
+
+/* SD card on SPI1 */
+
+#ifdef CONFIG_RP2040_SPISD
+  /* Mount the SPI-based MMC/SD block driver */
+
+  ret = board_spisd_initialize(0, 1);
+  if (ret < 0)
+    {
+      syslog(LOG_ERR, "Failed to initialize SPI device to MMC/SD: %d\n",
+           ret);
     }
 #endif
 
