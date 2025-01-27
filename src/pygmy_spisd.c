@@ -1,5 +1,5 @@
 /****************************************************************************
- * boards/arm/rp2040/pygmy/include/rp2040_spisd.h
+ * boards/arm/rp2040/pygmy/src/pygmy_spisd.c
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -20,36 +20,32 @@
  *
  ****************************************************************************/
 
-#ifndef __BOARDS_ARM_RP2040_PYGMY_INCLUDE_RP2040_SPISD_H
-#define __BOARDS_ARM_RP2040_PYGMY_INCLUDE_RP2040_SPISD_H
-
 /****************************************************************************
  * Included Files
  ****************************************************************************/
 
 #include <nuttx/config.h>
 
+#include <debug.h>
+#include <nuttx/board.h>
+#include <nuttx/fs/fs.h>
+#include <nuttx/mmcsd.h>
+
+#include "rp2040_gpio.h"
+#include "rp2040_spi.h"
+
 /****************************************************************************
- * Public Types
+ * Pre-processor Definitions
  ****************************************************************************/
 
-#ifndef __ASSEMBLY__
+/* Configuration ************************************************************/
 
-/****************************************************************************
- * Public Data
- ****************************************************************************/
-
-#undef EXTERN
-#if defined(__cplusplus)
-#define EXTERN extern "C"
-extern "C"
-{
-#else
-#define EXTERN extern
+#ifndef CONFIG_RP2040_SPISD_SLOT_NO
+#define CONFIG_RP2040_SPISD_SLOT_NO 0
 #endif
 
 /****************************************************************************
- * Public Function Prototypes
+ * Public Functions
  ****************************************************************************/
 
 /****************************************************************************
@@ -60,39 +56,52 @@ extern "C"
  *
  ****************************************************************************/
 
-#ifdef CONFIG_RP2040_SPISD
-int pygmy_spisd_initialize(int minor, int bus);
+int pygmy_spisd_initialize(int minor, int bus)
+{
+  int ret;
+  struct spi_dev_s *spi;
+
+  /* Initialize spi device */
+
+  spi = rp2040_spibus_initialize(bus);
+  if (!spi)
+    {
+      ferr("ERROR: Failed to initialize spi%d.\n", bus);
+      return -ENODEV;
+    }
+
+    /* Pull up RX */
+
+#ifdef CONFIG_RP2040_SPI1
+  if (bus == 1)
+    {
+      rp2040_gpio_set_pulls(CONFIG_RP2040_SPI1_RX_GPIO, true, false);
+    }
+#else
+  #error "The Pygmy requires SPI1 enabled for SPISD."
 #endif
 
-/****************************************************************************
- * Name: board_spisd_initialize
- *
- * Description:
- *   Trick the RP2040 common bringup code into believing this function exists.
- *   Pygmy only uses the Pygmy-specific initialization.
- *
- ****************************************************************************/
+  /* TODO use littlefs & vfat split partitions */
 
-#ifdef CONFIG_RP2040_SPISD
-int board_spisd_initialize(int minor, int bus);
-#endif
+  /* Get the SPI driver instance for the SD chip select */
 
-/****************************************************************************
- * Name: board_spisd_status
- *
- * Description:
- *   Get the status whether SD Card is present or not.
- *
- ****************************************************************************/
+  finfo("Initializing Pygmy SPI1 for the MMC/SD slot\n");
 
-#ifdef CONFIG_RP2040_SPISD
-uint8_t board_spisd_status(struct spi_dev_s *dev, uint32_t devid);
-#endif
+  ret = mmcsd_spislotinitialize(minor, CONFIG_RP2040_SPISD_SLOT_NO, spi);
+  if (ret < 0)
+    {
+      ferr("ERROR: Failed to bind SPI device to MMC/SD slot %d: %d\n",
+           CONFIG_RP2040_SPISD_SLOT_NO, ret);
+      return ret;
+    }
 
-#undef EXTERN
-#if defined(__cplusplus)
+  /* Mount filesystem */
+
+  ret = nx_mount("/dev/mmcsd0", "/mnt/sd0", "vfat", 0, NULL);
+  if (ret < 0)
+    {
+      ferr("ERROR: Failed to mount the SDCARD. %d\n", ret);
+    }
+
+  return OK;
 }
-#endif
-
-#endif /* __ASSEMBLY__ */
-#endif /* __BOARDS_ARM_RP2040_PYGMY_INCLUDE_RP2040_SPISD_H */
