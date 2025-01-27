@@ -29,6 +29,7 @@
 #include <debug.h>
 #include <nuttx/board.h>
 #include <nuttx/fs/fs.h>
+#include <nuttx/fs/partition.h>
 #include <nuttx/mmcsd.h>
 
 #include "rp2040_gpio.h"
@@ -43,6 +44,66 @@
 #ifndef CONFIG_RP2040_SPISD_SLOT_NO
 #define CONFIG_RP2040_SPISD_SLOT_NO 0
 #endif
+
+#define MMCSD_DEVNAME "/dev/mmcsd0"
+
+/****************************************************************************
+ * Private Types
+ ****************************************************************************/
+
+struct partition_state_s
+{
+  int partition;
+  int err;
+};
+
+/****************************************************************************
+ * Private Functions
+ ****************************************************************************/
+
+static void partition_handler(struct partition_s *part, void *arg)
+{
+  struct partition_state_s *state = (struct partition_state_s *)(arg);
+
+  finfo("Pygmy partition handler called.");
+
+  char devname[] = "/dev/mmcsd0p0";
+
+  if (state->partition < 10 && part->index == state->partition)
+    {
+      finfo("Found partition %u\n", state->partition);
+      devname[sizeof(devname) - 2] = state->partition + 48;
+      state->err = register_blockpartition(devname, 0, "/dev/mmcsd0",
+                                           part->firstblock, part->nblocks);
+    }
+}
+
+/****************************************************************************
+ * Name: pygmy_register_partition
+ *
+ * Description:
+ *   Register partitions found in mmcsd0
+ *
+ * Returned Value:
+ *   Zero (OK) is returned on success; A negated errno value is returned
+ *   to indicate the nature of any failure.
+ *
+ ****************************************************************************/
+
+static int pygmy_register_partition(unsigned partition)
+{
+  int err;
+  struct partition_state_s part = {.partition = partition, .err = ENOENT};
+
+  finfo("Pygmy trying to register partition %u\n", partition);
+
+  err = parse_block_partition("/dev/mmcsd0", partition_handler, &part);
+  if (err < 0)
+    {
+      return err;
+    }
+  return part.err;
+}
 
 /****************************************************************************
  * Public Functions
@@ -78,7 +139,7 @@ int pygmy_spisd_initialize(int minor, int bus)
       rp2040_gpio_set_pulls(CONFIG_RP2040_SPI1_RX_GPIO, true, false);
     }
 #else
-  #error "The Pygmy requires SPI1 enabled for SPISD."
+#error "The Pygmy requires SPI1 enabled for SPISD."
 #endif
 
   /* TODO use littlefs & vfat split partitions */
@@ -95,12 +156,31 @@ int pygmy_spisd_initialize(int minor, int bus)
       return ret;
     }
 
-  /* Mount filesystem */
+  /* Find the two partitions */
 
-  ret = nx_mount("/dev/mmcsd0", "/mnt/sd0", "vfat", 0, NULL);
+  for (int i = 0; i < 2; i++)
+    {
+      ret = pygmy_register_partition(i);
+      if (ret)
+        {
+          ferr("Couldn't register partition %d: %d\n", i, ret);
+        }
+    }
+
+  /* Mount user friendly FAT filesystem */
+
+  ret = nx_mount(MMCSD_DEVNAME "p0", "/ejectfs", "vfat", 0, NULL);
   if (ret < 0)
     {
-      ferr("ERROR: Failed to mount the SDCARD. %d\n", ret);
+      ferr("ERROR: Failed to mount " MMCSD_DEVNAME "p0. %d\n", ret);
+    }
+
+  /* Mount power safe filesystem */
+
+  ret = nx_mount(MMCSD_DEVNAME "p1", "/pwrfs", "littlefs", 0, "autoformat");
+  if (ret < 0)
+    {
+      ferr("ERROR: Failed to mount " MMCSD_DEVNAME "p0. %d\n", ret);
     }
 
   return OK;
