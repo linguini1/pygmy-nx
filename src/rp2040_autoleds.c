@@ -97,6 +97,7 @@ void board_autoled_on(int led)
         rp2040_gpio_put(GPIO_LED_START, true);
         break;
 
+      case LED_ASSERTION:
       case LED_PANIC:  /* Turn on the panic LED */
         rp2040_gpio_put(GPIO_LED_PANIC, true);
         break;
