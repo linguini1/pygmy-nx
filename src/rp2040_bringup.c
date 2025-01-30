@@ -54,6 +54,11 @@
 #include <nuttx/sensors/lis2mdl.h>
 #endif
 
+#ifdef CONFIG_I2C_EE_24XX
+#include "rp2040_i2c.h"
+#include <nuttx/eeprom/i2c_xx24xx.h>
+#endif
+
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
@@ -199,13 +204,21 @@ int rp2040_bringup(void)
     // want
 
     /* Peripherals
-     * TODO EEPROM
      * TODO LSM6DSO32
      * TODO GPS
      * TODO RN2903
      * TODO ADC for battery charge
-     * TODO SD card file system
      */
+
+    /* EEPROM at 0x50 (currently writeable) */
+
+#ifdef CONFIG_I2C_EE_24XX
+    ret = ee24xx_initialize(rp2040_i2cbus_initialize(1), 0x50, "eeprom",
+                            EEPROM_M24C32, false);
+    if (ret < 0) {
+      syslog(LOG_ERR, "Could not register EEPROM device: %d\n", ret);
+    }
+#endif
 
     /* Barometric pressure sensor at 0x77 */
 
