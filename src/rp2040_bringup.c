@@ -257,12 +257,18 @@ int rp2040_bringup(void)
     /* SD card on SPI1 */
 
 #ifdef CONFIG_RP2040_SPISD
+
+#if !defined(CONFIG_RP2040_SPI1)
+#error "Pygmy needs SPI1 enabled for SD card access"
+#endif
+
   /* Mount the SPI-based MMC/SD block driver */
 
-  ret = board_spisd_initialize(0, 1);
+  ret = pygmy_spisd_initialize(0, 1);
   if (ret < 0)
     {
-      syslog(LOG_ERR, "Failed to initialize SPI device to MMC/SD: %d\n", ret);
+      syslog(LOG_ERR, "Pygmy failed to initialize SPI device to MMC/SD: %d\n",
+             ret);
     }
 #endif
 
