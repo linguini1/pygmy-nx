@@ -59,20 +59,22 @@
 #include <nuttx/eeprom/i2c_xx24xx.h>
 #endif
 
+#ifdef CONFIG_LPWAN_RN2903
+#include <nuttx/wireless/lpwan/rn2903.h>
+#endif
+
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
 
 #if defined(CONFIG_SENSORS_LIS2MDL) && defined(CONFIG_SCHED_HPWORK)
-static int pygmy_lis2mdl_attach(xcpt_t handler, FAR void *arg)
-{
+static int pygmy_lis2mdl_attach(xcpt_t handler, FAR void *arg) {
   int err;
   err = rp2040_gpio_irq_attach(GPIO_MAG_INT, RP2040_GPIO_INTR_EDGE_HIGH,
                                handler, arg);
-  if (err < 0)
-    {
-      return err;
-    }
+  if (err < 0) {
+    return err;
+  }
 
   rp2040_gpio_enable_irq(GPIO_MAG_INT);
   return err;
@@ -87,8 +89,7 @@ static int pygmy_lis2mdl_attach(xcpt_t handler, FAR void *arg)
  * Name: rp2040_bringup
  ****************************************************************************/
 
-int rp2040_bringup(void)
-{
+int rp2040_bringup(void) {
 
   int ret;
 
@@ -100,42 +101,38 @@ int rp2040_bringup(void)
 #ifdef CONFIG_RP2040_I2C_DRIVER
 #ifdef CONFIG_RP2040_I2C0
   ret = board_i2cdev_initialize(0);
-  if (ret < 0)
-    {
-      syslog(LOG_ERR, "Failed to initialize I2C0.\n");
-    }
+  if (ret < 0) {
+    syslog(LOG_ERR, "Failed to initialize I2C0.\n");
+  }
 #endif
 
 #ifdef CONFIG_RP2040_I2C1
   ret = board_i2cdev_initialize(1);
-  if (ret < 0)
-    {
-      syslog(LOG_ERR, "Failed to initialize I2C1.\n");
-    }
+  if (ret < 0) {
+    syslog(LOG_ERR, "Failed to initialize I2C1.\n");
+  }
 #endif
 #endif
 
-    /* SPI interfaces */
+  /* SPI interfaces */
 
 #ifdef CONFIG_RP2040_SPI_DRIVER
 #ifdef CONFIG_RP2040_SPI0
   ret = board_spidev_initialize(0);
-  if (ret < 0)
-    {
-      syslog(LOG_ERR, "Failed to initialize SPI0.\n");
-    }
+  if (ret < 0) {
+    syslog(LOG_ERR, "Failed to initialize SPI0.\n");
+  }
 #endif
 
 #ifdef CONFIG_RP2040_SPI1
   ret = board_spidev_initialize(1);
-  if (ret < 0)
-    {
-      syslog(LOG_ERR, "Failed to initialize SPI1.\n");
-    }
+  if (ret < 0) {
+    syslog(LOG_ERR, "Failed to initialize SPI1.\n");
+  }
 #endif
 #endif
 
-    /* Initialize ADC */
+  /* Initialize ADC */
 
 #if defined(CONFIG_ADC) && defined(CONFIG_RP2040_ADC)
 
@@ -170,10 +167,9 @@ int rp2040_bringup(void)
 #endif
 
   ret = rp2040_adc_setup("/dev/adc0", ADC_0, ADC_1, ADC_2, ADC_3, ADC_TEMP);
-  if (ret != OK)
-    {
-      syslog(LOG_ERR, "Failed to initialize ADC Driver: %d\n", ret);
-    }
+  if (ret != OK) {
+    syslog(LOG_ERR, "Failed to initialize ADC Driver: %d\n", ret);
+  }
 
 #endif /* defined(CONFIG_ADC) && defined(CONFIG_RP2040_ADC) */
 
@@ -181,65 +177,60 @@ int rp2040_bringup(void)
   /* Configure watchdog timer */
 
   ret = rp2040_wdt_init();
-  if (ret < 0)
-    {
-      syslog(LOG_ERR, "ERROR: Failed to initialize watchdog drivers: %d\n",
-             ret);
-    }
+  if (ret < 0) {
+    syslog(LOG_ERR, "ERROR: Failed to initialize watchdog drivers: %d\n", ret);
+  }
 #endif
 
-    /* Procfs file system */
+  /* Procfs file system */
 
 #ifdef CONFIG_FS_PROCFS
   /* Mount the procfs file system */
 
   ret = nx_mount(NULL, "/proc", "procfs", 0, NULL);
-  if (ret < 0)
-    {
-      serr("ERROR: Failed to mount procfs at %s: %d\n", "/proc", ret);
-    }
+  if (ret < 0) {
+    serr("ERROR: Failed to mount procfs at %s: %d\n", "/proc", ret);
+  }
 #endif
 
-    // TODO copy from rp2040_common_bringup code for items that I actually
-    // want
+  // TODO copy from rp2040_common_bringup code for items that I actually
+  // want
 
-    /* Peripherals
-     * TODO LSM6DSO32
-     * TODO GPS
-     * TODO RN2903
-     * TODO ADC for battery charge
-     */
+  /* Peripherals
+   * TODO LSM6DSO32
+   * TODO GPS
+   * TODO RN2903
+   * TODO ADC for battery charge
+   */
 
-    /* EEPROM at 0x50 (currently writeable) */
+  /* EEPROM at 0x50 (currently writeable) */
 
 #ifdef CONFIG_I2C_EE_24XX
-    ret = ee24xx_initialize(rp2040_i2cbus_initialize(1), 0x50, "eeprom",
-                            EEPROM_M24C32, false);
-    if (ret < 0) {
-      syslog(LOG_ERR, "Could not register EEPROM device: %d\n", ret);
-    }
+  ret = ee24xx_initialize(rp2040_i2cbus_initialize(1), 0x50, "eeprom",
+                          EEPROM_M24C32, false);
+  if (ret < 0) {
+    syslog(LOG_ERR, "Could not register EEPROM device: %d\n", ret);
+  }
 #endif
 
-    /* Barometric pressure sensor at 0x77 */
+  /* Barometric pressure sensor at 0x77 */
 
 #ifdef CONFIG_SENSORS_MS56XX
   /* Try to register MS56xx device at I2C0 */
 
   ret = ms56xx_register(rp2040_i2cbus_initialize(0), 0, MS56XX_ADDR0,
                         MS56XX_MODEL_MS5611);
-  if (ret < 0)
-    {
-      syslog(LOG_ERR, "Couldn't register MS5611 at %u: %d\n", MS56XX_ADDR0,
-             ret);
-    }
+  if (ret < 0) {
+    syslog(LOG_ERR, "Couldn't register MS5611 at %u: %d\n", MS56XX_ADDR0, ret);
+  }
 #endif
 
-    /* Magnetometer at 0x1E */
+  /* Magnetometer at 0x1E */
 
 #ifdef CONFIG_SENSORS_LIS2MDL
-    /* Try to register LIS2MDL device at I2C0 */
+  /* Try to register LIS2MDL device at I2C0 */
 
-    /* Only use interrupt driven mode if HPWORK is enabled */
+  /* Only use interrupt driven mode if HPWORK is enabled */
 
 #ifdef CONFIG_SCHED_HPWORK
   ret = lis2mdl_register(rp2040_i2cbus_initialize(0), 0, 0x1e,
@@ -248,22 +239,42 @@ int rp2040_bringup(void)
   ret = lis2mdl_register(rp2040_i2cbus_initialize(0), 0, 0x1e, NULL);
 #endif /* CONFIG_SCHED_HPWORK */
 
-  if (ret < 0)
-    {
-      syslog(LOG_ERR, "Couldn't register LIS2MDL at 0x1E: %d\n", ret);
-    }
+  if (ret < 0) {
+    syslog(LOG_ERR, "Couldn't register LIS2MDL at 0x1E: %d\n", ret);
+  }
 #endif
 
-    /* SD card on SPI1 */
+  /* SD card on SPI1 */
 
 #ifdef CONFIG_RP2040_SPISD
   /* Mount the SPI-based MMC/SD block driver */
 
   ret = board_spisd_initialize(0, 1);
-  if (ret < 0)
-    {
-      syslog(LOG_ERR, "Failed to initialize SPI device to MMC/SD: %d\n", ret);
-    }
+  if (ret < 0) {
+    syslog(LOG_ERR, "Failed to initialize SPI device to MMC/SD: %d\n", ret);
+  }
+#endif
+
+#ifdef CONFIG_LPWAN_RN2903
+
+#if CONFIG_RP2040_UART1_BAUD != 57600
+#error "CONFIG_RP2040_UART1_BAUD must be set to 57600 for RN2903"
+#endif /* CONFIG_RP2040_UART1_BAUD != 57600 */
+
+#if CONFIG_UART1_BAUD != 57600
+#error "CONFIG_UART1_BAUD must be set to 57600 for RN2903"
+#endif /* CONFIG_RP2040_UART1_BAUD != 57600 */
+
+#ifndef CONFIG_STANDARD_SERIAL
+#error "CONFIG_STANDARD_SERIAL must be enabled for RN2903"
+#endif /* CONFIG_STANDARD_SERIAL */
+
+  /* Register the RN2903 device driver */
+
+  ret = rn2903_register("/dev/rn2903", "/dev/ttyS1");
+  if (ret < 0) {
+    syslog(LOG_ERR, "Failed to register RN2903 device driver: %d\n", ret);
+  }
 #endif
 
   return OK;
