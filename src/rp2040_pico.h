@@ -39,6 +39,12 @@
 
 #define GPIO_BUZZER          23 /* The board's arming buzzer pin */
 
+/* Interrupt pins */
+
+#define GPIO_MAG_INT      12 /* LIS2MDL interrupt pin */
+#define GPIO_GYRO_INT     13 /* LSM6DSO32 gyroscope interrupt pin */
+#define GPIO_XL_INT       14 /* LSM6DSO32 accelerometer interrupt pin */
+
 int rp2040_bringup(void);
 
 #endif /* __BOARDS_ARM_RP2040_PYGMY_SRC_PYGMY_H */

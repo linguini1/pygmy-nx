@@ -80,13 +80,13 @@
  */
 
 #define LED_STARTED       0  /* NuttX has been started  OFF    */
-#define LED_HEAPALLOCATE  0  /* Heap has been allocated OFF    */
-#define LED_IRQSENABLED   0  /* Interrupts enabled      OFF    */
-#define LED_STACKCREATED  0  /* Idle stack created      ON     */
-#define LED_INIRQ         2  /* In an interrupt         N/C    */
-#define LED_SIGNAL        4  /* In a signal handler     N/C    */
-#define LED_ASSERTION     4  /* An assertion failed     N/C    */
-#define LED_PANIC         3  /* The system has crashed  FLASH  */
+#define LED_HEAPALLOCATE  1  /* Heap has been allocated OFF    */
+#define LED_IRQSENABLED   2  /* Interrupts enabled      OFF    */
+#define LED_STACKCREATED  3  /* Idle stack created      ON     */
+#define LED_INIRQ         4  /* In an interrupt         N/C    */
+#define LED_SIGNAL        5  /* In a signal handler     N/C    */
+#define LED_ASSERTION     6  /* An assertion failed     N/C    */
+#define LED_PANIC         7  /* The system has crashed  FLASH  */
 #undef  LED_IDLE             /* Not used                       */
 
 /* Thus if the LED is statically on, NuttX has successfully  booted and is,
