@@ -59,7 +59,7 @@
 #include <nuttx/eeprom/i2c_xx24xx.h>
 #endif
 
-#ifdef CONFIG_LPWAN_RN2903
+#ifdef CONFIG_LPWAN_RN2XX3
 #include <nuttx/wireless/lpwan/rn2903.h>
 #endif
 
@@ -199,7 +199,7 @@ int rp2040_bringup(void) {
   /* Peripherals
    * TODO LSM6DSO32
    * TODO GPS
-   * TODO RN2903
+   * TODO RN2XX3
    * TODO ADC for battery charge
    */
 
@@ -255,25 +255,25 @@ int rp2040_bringup(void) {
   }
 #endif
 
-#ifdef CONFIG_LPWAN_RN2903
+#ifdef CONFIG_LPWAN_RN2XX3
 
 #if CONFIG_RP2040_UART1_BAUD != 57600
-#error "CONFIG_RP2040_UART1_BAUD must be set to 57600 for RN2903"
+#error "CONFIG_RP2040_UART1_BAUD must be set to 57600 for RN2XX3"
 #endif /* CONFIG_RP2040_UART1_BAUD != 57600 */
 
 #if CONFIG_UART1_BAUD != 57600
-#error "CONFIG_UART1_BAUD must be set to 57600 for RN2903"
+#error "CONFIG_UART1_BAUD must be set to 57600 for RN2XX3"
 #endif /* CONFIG_RP2040_UART1_BAUD != 57600 */
 
 #ifndef CONFIG_STANDARD_SERIAL
-#error "CONFIG_STANDARD_SERIAL must be enabled for RN2903"
+#error "CONFIG_STANDARD_SERIAL must be enabled for RN2XX3"
 #endif /* CONFIG_STANDARD_SERIAL */
 
-  /* Register the RN2903 device driver */
+  /* Register the RN2XX3 device driver */
 
-  ret = rn2903_register("/dev/rn2903", "/dev/ttyS1");
+  ret = rn2xx3_register("/dev/rn2903", "/dev/ttyS1");
   if (ret < 0) {
-    syslog(LOG_ERR, "Failed to register RN2903 device driver: %d\n", ret);
+    syslog(LOG_ERR, "Failed to register RN2XX3 device driver: %d\n", ret);
   }
 #endif
 
