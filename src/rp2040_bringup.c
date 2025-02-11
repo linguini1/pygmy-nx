@@ -60,7 +60,7 @@
 #endif
 
 #ifdef CONFIG_LPWAN_RN2XX3
-#include <nuttx/wireless/lpwan/rn2903.h>
+#include <nuttx/wireless/lpwan/rn2xx3.h>
 #endif
 
 /****************************************************************************
