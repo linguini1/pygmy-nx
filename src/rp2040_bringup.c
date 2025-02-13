@@ -199,7 +199,6 @@ int rp2040_bringup(void) {
   /* Peripherals
    * TODO LSM6DSO32
    * TODO GPS
-   * TODO RN2XX3
    * TODO ADC for battery charge
    */
 
