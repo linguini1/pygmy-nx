@@ -54,6 +54,11 @@
 #include <nuttx/sensors/lis2mdl.h>
 #endif
 
+#ifdef CONFIG_SENSORS_LSM6DSO32
+#include "rp2040_i2c.h"
+#include <nuttx/sensors/lsm6dso32.h>
+#endif
+
 #ifdef CONFIG_I2C_EE_24XX
 #include "rp2040_i2c.h"
 #include <nuttx/eeprom/i2c_xx24xx.h>
@@ -77,6 +82,36 @@ static int pygmy_lis2mdl_attach(xcpt_t handler, FAR void *arg) {
   }
 
   rp2040_gpio_enable_irq(GPIO_MAG_INT);
+  return err;
+}
+#endif
+
+#if defined(CONFIG_SENSORS_LSM6DSO32) && defined(CONFIG_SCHED_HPWORK)
+static int pygmy_lsm6dso32_gy_attach(xcpt_t handler, FAR void *arg)
+{
+  int err;
+  err = rp2040_gpio_irq_attach(GPIO_GYRO_INT, RP2040_GPIO_INTR_EDGE_HIGH,
+                               handler, arg);
+  if (err < 0)
+    {
+      return err;
+    }
+
+  rp2040_gpio_enable_irq(GPIO_GYRO_INT);
+  return err;
+}
+
+static int pygmy_lsm6dso32_xl_attach(xcpt_t handler, FAR void *arg)
+{
+  int err;
+  err = rp2040_gpio_irq_attach(GPIO_XL_INT, RP2040_GPIO_INTR_EDGE_HIGH,
+                               handler, arg);
+  if (err < 0)
+    {
+      return err;
+    }
+
+  rp2040_gpio_enable_irq(GPIO_XL_INT);
   return err;
 }
 #endif
@@ -193,11 +228,7 @@ int rp2040_bringup(void) {
   }
 #endif
 
-  // TODO copy from rp2040_common_bringup code for items that I actually
-  // want
-
   /* Peripherals
-   * TODO LSM6DSO32
    * TODO GPS
    * TODO ADC for battery charge
    */
@@ -207,9 +238,10 @@ int rp2040_bringup(void) {
 #ifdef CONFIG_I2C_EE_24XX
   ret = ee24xx_initialize(rp2040_i2cbus_initialize(1), 0x50, "eeprom",
                           EEPROM_M24C32, false);
-  if (ret < 0) {
-    syslog(LOG_ERR, "Could not register EEPROM device: %d\n", ret);
-  }
+  if (ret < 0)
+    {
+      syslog(LOG_ERR, "Could not register EEPROM device: %d\n", ret);
+    }
 #endif
 
   /* Barometric pressure sensor at 0x77 */
@@ -243,15 +275,48 @@ int rp2040_bringup(void) {
   }
 #endif
 
-  /* SD card on SPI1 */
+#ifdef CONFIG_SENSORS_LSM6DSO32
+  /* Try to register LSM6DSO32 IMU at 0x6b on I2C0 */
+
+  /* Only use interrupt driven mode if HPWORK is enabled */
+
+  struct lsm6dso32_config_s lsm6dso32_config = {
+      .gy_int = LSM6DSO32_INT1,
+      .xl_int = LSM6DSO32_INT2,
+  };
+
+#ifdef CONFIG_SCHED_HPWORK
+  lsm6dso32_config.gy_attach = pygmy_lsm6dso32_gy_attach;
+  lsm6dso32_config.xl_attach = pygmy_lsm6dso32_xl_attach;
+#else
+  lsm6dso32_config.gy_attach = NULL;
+  lsm6dso32_config.xl_attach = NULL;
+#endif /* CONFIG_SCHED_HPWORK */
+
+  ret = lsm6dso32_register(rp2040_i2cbus_initialize(0), 0x6b, 0,
+                           &lsm6dso32_config);
+  if (ret < 0)
+    {
+      syslog(LOG_ERR, "Couldn't register LSM6DSO32 at 0x6b: %d\n", ret);
+    }
+#endif
+
+    /* SD card on SPI1 */
 
 #ifdef CONFIG_RP2040_SPISD
+
+#if !defined(CONFIG_RP2040_SPI1)
+#error "Pygmy needs SPI1 enabled for SD card access"
+#endif
+
   /* Mount the SPI-based MMC/SD block driver */
 
-  ret = board_spisd_initialize(0, 1);
-  if (ret < 0) {
-    syslog(LOG_ERR, "Failed to initialize SPI device to MMC/SD: %d\n", ret);
-  }
+  ret = pygmy_spisd_initialize(0, 1);
+  if (ret < 0)
+    {
+      syslog(LOG_ERR, "Pygmy failed to initialize SPI device to MMC/SD: %d\n",
+             ret);
+    }
 #endif
 
 #ifdef CONFIG_LPWAN_RN2XX3

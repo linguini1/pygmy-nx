@@ -53,10 +53,23 @@ extern "C"
  ****************************************************************************/
 
 /****************************************************************************
- * Name: board_spisd_initialize
+ * Name: pygmy_spisd_initialize
  *
  * Description:
  *   Initialize the SPI-based SD card.
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_RP2040_SPISD
+int pygmy_spisd_initialize(int minor, int bus);
+#endif
+
+/****************************************************************************
+ * Name: board_spisd_initialize
+ *
+ * Description:
+ *   Trick the RP2040 common bringup code into believing this function exists.
+ *   Pygmy only uses the Pygmy-specific initialization.
  *
  ****************************************************************************/
 
