@@ -28,8 +28,8 @@
 
 #include <debug.h>
 
-#include <nuttx/board.h>
 #include <arch/board/board.h>
+#include <nuttx/board.h>
 
 #include "arm_internal.h"
 #include "rp2040_gpio.h"
@@ -59,9 +59,9 @@
 
 void rp2040_boardearlyinitialize(void)
 {
-  #ifdef CONFIG_ARCH_BOARD_COMMON
+#ifdef CONFIG_ARCH_BOARD_COMMON
   rp2040_common_earlyinitialize();
-  #endif
+#endif
 
   /* --- Place any board specific early initialization here --- */
 
@@ -81,9 +81,13 @@ void rp2040_boardearlyinitialize(void)
 
 void rp2040_boardinitialize(void)
 {
-  #ifdef CONFIG_ARCH_BOARD_COMMON
+#ifdef CONFIG_ARCH_LEDS
+  board_autoled_initialize();
+#endif
+
+#ifdef CONFIG_ARCH_BOARD_COMMON
   rp2040_common_initialize();
-  #endif
+#endif
 
   /* --- Place any board specific initialization here --- */
 }
