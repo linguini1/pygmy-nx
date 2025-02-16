@@ -130,6 +130,7 @@ void board_autoled_off(int led)
         rp2040_gpio_put(GPIO_LED_START, false);
         break;
 
+      case LED_ASSERTION:
       case LED_PANIC:  /* Turn off the panic LED */
         rp2040_gpio_put(GPIO_LED_PANIC, false);
         break;
