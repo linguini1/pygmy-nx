@@ -67,9 +67,11 @@ void rp2040_boardearlyinitialize(void)
 
   /* Set board LED pin */
 
+#ifndef CONFIG_ARCH_LEDS
   rp2040_gpio_init(BOARD_GPIO_LED_PIN);
   rp2040_gpio_setdir(BOARD_GPIO_LED_PIN, true);
   rp2040_gpio_put(BOARD_GPIO_LED_PIN, true);
+#endif
 }
 
 /****************************************************************************
@@ -83,6 +85,7 @@ void rp2040_boardinitialize(void)
 {
 #ifdef CONFIG_ARCH_LEDS
   board_autoled_initialize();
+  board_autoled_on(LED_STARTED);
 #endif
 
 #ifdef CONFIG_ARCH_BOARD_COMMON
