@@ -250,7 +250,7 @@ int rp2040_bringup(void) {
   /* Try to register MS56xx device at I2C0 */
 
   ret = ms56xx_register(rp2040_i2cbus_initialize(0), 0, MS56XX_ADDR0,
-                        MS56XX_MODEL_MS5611);
+                        MS56XX_MODEL_MS5607);
   if (ret < 0) {
     syslog(LOG_ERR, "Couldn't register MS5611 at %u: %d\n", MS56XX_ADDR0, ret);
   }
