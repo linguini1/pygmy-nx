@@ -68,6 +68,10 @@
 #include <nuttx/wireless/lpwan/rn2xx3.h>
 #endif
 
+#ifdef CONFIG_SENSORS_L86_XXX
+#include <nuttx/sensors/l86xxx.h>
+#endif
+
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
@@ -228,10 +232,7 @@ int rp2040_bringup(void) {
   }
 #endif
 
-  /* Peripherals
-   * TODO GPS
-   * TODO ADC for battery charge
-   */
+  /* Peripherals */
 
   /* EEPROM at 0x50 (currently writeable) */
 
@@ -339,6 +340,15 @@ int rp2040_bringup(void) {
   if (ret < 0) {
     syslog(LOG_ERR, "Failed to register RN2XX3 device driver: %d\n", ret);
   }
+#endif
+
+#ifdef CONFIG_SENSORS_L86_XXX
+  ret = l86xxx_register("/dev/ttyS0", 0);
+  if (ret < 0)
+    {
+      syslog(LOG_ERR, "Failed to register LC86G GPS device driver: %d\n",
+             ret);
+    }
 #endif
 
   return OK;
