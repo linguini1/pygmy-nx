@@ -3,6 +3,8 @@
 # see the file kconfig-language.txt in the NuttX tools repository.
 #
 
-if ARCH_BOARD_PYGMY
-
-endif
+config PYGMY_STARTUP_BUZZER
+	bool "Startup buzzer"
+	default y
+	---help---
+		Turn on the buzzer at startup.

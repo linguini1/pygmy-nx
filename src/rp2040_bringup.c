@@ -135,6 +135,14 @@ int rp2040_bringup(void) {
   /* Chip bring-up (doing it our own way, not calling rp2040_common_bringup)
    */
 
+#ifdef CONFIG_PYGMY_STARTUP_BUZZER
+  /* Buzzer sounding on startup */
+
+  rp2040_gpio_init(GPIO_BUZZER);
+  rp2040_gpio_setdir(GPIO_BUZZER, true);
+  rp2040_gpio_put(GPIO_BUZZER, 1);
+#endif
+
   /* I2C interfaces */
 
 #ifdef CONFIG_RP2040_I2C_DRIVER
